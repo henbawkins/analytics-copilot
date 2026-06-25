@@ -9,24 +9,25 @@ type Msg = { role: "user" | "assistant"; content: string };
 const EXAMPLE_GROUPS: { label: string; source: string; prompts: string[] }[] = [
   {
     label: "Full reports",
-    source: "All sources",
+    source: "All sources · export to PDF",
     prompts: [
-      "Full SEO snapshot for [client]",
-      "Complete monthly review for [client] — traffic, rankings, authority, competitors",
-      "Everything on [client] for the last 28 days, ready to export as a PDF",
+      "Full SEO snapshot for [client] — then I'll export it as a PDF",
+      "Monthly client review for [client]: traffic, organic search, rankings & competitors",
+      "How did [client] do this month vs last? Summarize across every source",
+      "[client] vs [competitor]: side-by-side SEO health check",
     ],
   },
   {
     label: "Traffic & engagement",
     source: "GA4",
     prompts: [
-      "List the GA4 properties I have access to",
-      "Sessions and users for the last 28 days, with a daily trend chart",
-      "Compare this month's sessions to last month for [client]",
-      "Which channels drove the most conversions in the last 28 days?",
+      "List the GA4 properties I can access",
+      "Sessions & users for [client], last 28 days, with a daily trend chart",
+      "[client] this month vs last — sessions, conversions, and what changed",
+      "Which channels drove the most conversions for [client], last 28 days?",
       "Top landing pages by sessions for [client], last 30 days",
-      "Traffic by device category for [client] this month",
-      "Where is [client]'s traffic coming from geographically?",
+      "New vs returning users and engagement rate for [client] this month",
+      "[client]'s traffic by channel and top countries",
     ],
   },
   {
@@ -34,25 +35,25 @@ const EXAMPLE_GROUPS: { label: string; source: string; prompts: string[] }[] = [
     source: "Search Console",
     prompts: [
       "List the Search Console sites I can access",
-      "Top 10 organic search queries by clicks over the last 28 days",
-      "Clicks and impressions trend for [client], last 3 months",
-      "Which pages gained or lost the most clicks vs the prior period?",
-      "What queries are we ranking on page 2 for (positions 11-20)?",
-      "Average position trend for [client] over the last 90 days",
-      "Mobile vs desktop search performance for [client]",
+      "[client]'s top organic queries by clicks, last 28 days",
+      "Clicks & impressions trend for [client], last 3 months (chart)",
+      "Quick wins for [client]: queries on page 2 (positions 11-20) with high impressions",
+      "Which pages gained or lost the most clicks for [client] vs the prior 28 days?",
+      "Average position trend for [client] over 90 days",
+      "[client]'s top pages by clicks, and which queries each ranks for",
     ],
   },
   {
     label: "SEO intelligence & competitors",
     source: "Semrush",
     prompts: [
-      "Give me a Semrush domain overview for [client].com",
-      "What organic keywords does [competitor].com rank for?",
-      "Who are [client].com's top organic competitors?",
-      "Search volume and difficulty for 'managed it services chicago'",
-      "Related keyword ideas for 'cloud backup' sorted by volume",
-      "Backlink profile and authority score for [client].com",
-      "Compare estimated organic traffic: [client].com vs [competitor].com",
+      "Semrush domain overview for [client].com",
+      "Top organic keywords [competitor].com ranks for",
+      "Who are [client].com's organic competitors?",
+      "Content gap: keywords [competitor].com ranks for that [client].com doesn't",
+      "Backlink profile & authority: [client].com vs [competitor].com",
+      "Search volume & difficulty for 'managed IT services [city]'",
+      "Keyword ideas around 'cloud backup' sorted by volume",
     ],
   },
   {
@@ -60,11 +61,11 @@ const EXAMPLE_GROUPS: { label: string; source: string; prompts: string[] }[] = [
     source: "Pro Rank Tracker",
     prompts: [
       "List the Pro Rank Tracker groups and tracked sites",
-      "How are [client]'s tracked keyword rankings trending this week?",
-      "Which tracked keywords moved up or down vs last week for [client]?",
-      "Show [client]'s keywords ranking in the top 3, with their best-ever rank",
-      "Which tracked keywords fell out of range (NTH) for [client]?",
-      "Compare current rank to a month ago for [client]'s tracked terms",
+      "How are [client]'s tracked rankings trending this week?",
+      "[client]'s biggest rank gains and losses vs last week",
+      "[client]'s keywords ranking in the top 3, with their best-ever rank",
+      "Tracked keywords that dropped out of range (NTH) for [client]",
+      "[client]'s rank movement vs a month ago",
     ],
   },
 ];
@@ -214,9 +215,12 @@ export default function Chat() {
           <div className="empty">
             <p>
               Ask about any client&apos;s traffic, search performance, SEO, or
-              keyword rankings. Replace <code>[client]</code> /{" "}
-              <code>[competitor]</code> with a real name — Copilot resolves the
-              right property, site, or domain for you.
+              keyword rankings — across GA4, Search Console, Semrush, and Pro
+              Rank Tracker. Replace <code>[client]</code> /{" "}
+              <code>[competitor]</code> with a real name and Copilot resolves the
+              right property, site, or domain for you. Every answer can be
+              exported to a branded <strong>PDF</strong> or to{" "}
+              <strong>Excel</strong>.
             </p>
             {EXAMPLE_GROUPS.map((group) => (
               <div key={group.label} className="example-group">
