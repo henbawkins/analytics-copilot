@@ -5,10 +5,58 @@ import MessageContent from "./MessageContent";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-const EXAMPLES = [
-  "List the GA4 properties I have access to",
-  "Sessions and users for the last 28 days, with a daily trend chart",
-  "Top 10 organic search queries by clicks over the last 28 days",
+const EXAMPLE_GROUPS: { label: string; source: string; prompts: string[] }[] = [
+  {
+    label: "Traffic & engagement",
+    source: "GA4",
+    prompts: [
+      "List the GA4 properties I have access to",
+      "Sessions and users for the last 28 days, with a daily trend chart",
+      "Compare this month's sessions to last month for [client]",
+      "Which channels drove the most conversions in the last 28 days?",
+      "Top landing pages by sessions for [client], last 30 days",
+      "Traffic by device category for [client] this month",
+      "Where is [client]'s traffic coming from geographically?",
+    ],
+  },
+  {
+    label: "Organic search (our sites)",
+    source: "Search Console",
+    prompts: [
+      "List the Search Console sites I can access",
+      "Top 10 organic search queries by clicks over the last 28 days",
+      "Clicks and impressions trend for [client], last 3 months",
+      "Which pages gained or lost the most clicks vs the prior period?",
+      "What queries are we ranking on page 2 for (positions 11-20)?",
+      "Average position trend for [client] over the last 90 days",
+      "Mobile vs desktop search performance for [client]",
+    ],
+  },
+  {
+    label: "SEO intelligence & competitors",
+    source: "Semrush",
+    prompts: [
+      "Give me a Semrush domain overview for [client].com",
+      "What organic keywords does [competitor].com rank for?",
+      "Who are [client].com's top organic competitors?",
+      "Search volume and difficulty for 'managed it services chicago'",
+      "Related keyword ideas for 'cloud backup' sorted by volume",
+      "Backlink profile and authority score for [client].com",
+      "Compare estimated organic traffic: [client].com vs [competitor].com",
+    ],
+  },
+  {
+    label: "Rank tracking",
+    source: "Pro Rank Tracker",
+    prompts: [
+      "List the Pro Rank Tracker groups and tracked sites",
+      "How are [client]'s tracked keyword rankings trending this week?",
+      "Which tracked keywords moved up or down vs last week for [client]?",
+      "Show [client]'s keywords ranking in the top 3, with their best-ever rank",
+      "Which tracked keywords fell out of range (NTH) for [client]?",
+      "Compare current rank to a month ago for [client]'s tracked terms",
+    ],
+  },
 ];
 
 export default function Chat() {
@@ -110,21 +158,36 @@ export default function Chat() {
       <div className="header">
         <div>
           <h1>Analytics Copilot</h1>
-          <div className="sub">GA4 + Search Console, across all clients</div>
+          <div className="sub">
+            GA4 + Search Console + Semrush + Pro Rank Tracker, across all clients
+          </div>
         </div>
       </div>
 
       <div className="messages" ref={scrollRef}>
         {messages.length === 0 && (
           <div className="empty">
-            <p>Ask about any client&apos;s traffic or search performance.</p>
-            <div className="examples">
-              {EXAMPLES.map((ex) => (
-                <button key={ex} onClick={() => send(ex)}>
-                  {ex}
-                </button>
-              ))}
-            </div>
+            <p>
+              Ask about any client&apos;s traffic, search performance, SEO, or
+              keyword rankings. Replace <code>[client]</code> /{" "}
+              <code>[competitor]</code> with a real name — Copilot resolves the
+              right property, site, or domain for you.
+            </p>
+            {EXAMPLE_GROUPS.map((group) => (
+              <div key={group.label} className="example-group">
+                <div className="example-group-head">
+                  {group.label}
+                  <span className="example-source">{group.source}</span>
+                </div>
+                <div className="examples">
+                  {group.prompts.map((ex) => (
+                    <button key={ex} onClick={() => send(ex)}>
+                      {ex}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

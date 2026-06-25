@@ -21,6 +21,10 @@ import {
   semrushRelatedKeywords,
   semrushBacklinksOverview,
 } from "@/lib/connectors/semrush";
+import {
+  listPrtGroups,
+  getPrtUrlRankings,
+} from "@/lib/connectors/prt";
 
 export const tools: Anthropic.Tool[] = [
   {
@@ -173,6 +177,26 @@ export const tools: Anthropic.Tool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "list_prt_groups",
+    description:
+      "List every Pro Rank Tracker (PRT) group and its tracked URLs. PRT groups map to clients/projects; each contains one or more tracked sites with a numeric urlId and its domain. Call this first when the user names a client/site for rank-tracking questions so you can resolve the urlId to pass to get_prt_url_rankings.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_prt_url_rankings",
+    description:
+      "Get a PRT tracked site's keyword rankings with built-in history. Returns each tracked keyword ('term') with its current rank plus yesterday / week-ago / month-ago ranks, best rank ever, search engine, location, type (organic, map/snack_pack), and search volume. A rank of 'NTH' means the keyword is not in the tracked range (i.e. not currently ranking within the positions PRT tracks). Use this for 'how are our rankings trending', 'did we move up/down', daily/weekly rank monitoring. Get the urlId from list_prt_groups first.",
+    input_schema: {
+      type: "object",
+      properties: {
+        urlId: { type: "string", description: "Numeric PRT URL id from list_prt_groups" },
+        limit: { type: "integer", description: "Max keywords to return (default 200)" },
+      },
+      required: ["urlId"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /** Execute a tool by name. Returns a JSON-serializable result for Claude. */
@@ -222,6 +246,13 @@ export async function dispatchTool(
         input.target as string,
         input.targetType as "root_domain" | "domain" | "url" | undefined,
       );
+    case "list_prt_groups":
+      return listPrtGroups();
+    case "get_prt_url_rankings":
+      return getPrtUrlRankings(
+        input.urlId as string,
+        input.limit as number | undefined,
+      );
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -231,17 +262,20 @@ export const SYSTEM_PROMPT = `You are Analytics Copilot, an internal assistant f
 - Google Analytics 4 (traffic, engagement, conversions)
 - Google Search Console (organic search clicks, impressions, average position for the client's OWN site)
 - Semrush (third-party SEO intelligence: domain authority/traffic estimates, the keywords any domain ranks for, keyword research/difficulty/volume, organic competitors, and backlink profiles — works for clients AND competitors)
+- Pro Rank Tracker (PRT) (dedicated daily/weekly rank tracking for a curated set of the client's target keywords, with built-in yesterday / week-ago / month-ago history and best-ever rank)
 
-The agency manages ~70 client properties. A single Google service account has read access to all GA4/GSC properties; a single Semrush key powers the Semrush tools. All are exposed through your tools.
+The agency manages ~70 client properties. A single Google service account has read access to all GA4/GSC properties; a single Semrush key powers the Semrush tools; a single PRT token powers the PRT tools. All are exposed through your tools.
 
 When to use which:
 - "How is my site doing / my traffic / my conversions" → GA4.
 - "What are we ranking for / clicks & impressions / our average position in Google" → GSC (the client's verified property; first-party Google data).
 - "Keyword volume/difficulty, what does <any domain> rank for, who are our SEO competitors, backlinks/authority, keyword ideas" → Semrush. Semrush works for ANY domain, so it's the tool for competitor analysis and keyword research where GSC (own-site only) can't help.
-- GSC vs Semrush for rankings: GSC = actual measured performance of the client's site; Semrush = estimated/third-party and available for competitors too.
+- "Are our target-keyword rankings moving up/down, daily/weekly rank changes, where do we rank for our tracked keywords, rank vs last week/month" → Pro Rank Tracker. PRT tracks a hand-picked set of the client's priority keywords with precise position history (yesterday / week-ago / month-ago / best-ever).
+- Three rank sources, when to pick which: GSC = actual measured Google performance (clicks/impressions/avg position) for the client's own site; PRT = precise daily/weekly position tracking for a curated keyword list, best for "did we move" trend questions on target keywords; Semrush = estimated/third-party rankings, the only option for competitors. Prefer PRT for tracked-keyword position trends, GSC for real traffic/CTR, Semrush for competitor/discovery.
 
 How to work:
-- When the user names a client/site, first call list_ga4_properties (and/or list_gsc_sites) to resolve the exact propertyId / siteUrl. Match on display name; if multiple plausibly match, ask the user which one. For Semrush you just need the bare domain (e.g. example.com) — no lookup needed.
+- When the user names a client/site, first call list_ga4_properties (and/or list_gsc_sites) to resolve the exact propertyId / siteUrl. Match on display name; if multiple plausibly match, ask the user which one. For Semrush you just need the bare domain (e.g. example.com) — no lookup needed. For PRT, call list_prt_groups first to find the client's group and its tracked urlId, then call get_prt_url_rankings with that urlId.
+- PRT rank value "NTH" means the keyword is not within the tracked position range (treat as "not currently ranking" / outside the tracked window), not zero. Lower rank numbers are better (1 = top).
 - Semrush 'database' defaults to 'us'; only change it for non-US markets. Semrush metrics are estimates; say so when relevant.
 - Pick sensible defaults: if no date range is given, use the last 28 days. Remember GSC data lags ~2-3 days.
 - Prefer querying exactly what's needed. Don't pull huge row counts when a small aggregate answers the question. Semrush calls cost API credits, so request a sensible limit (e.g. 50 keywords) unless the user asks for more.
