@@ -1,12 +1,37 @@
 "use client";
 
-import { signIn } from "next-auth/react";
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-function SignInInner() {
-  const params = useSearchParams();
-  const error = params.get("error");
+export default function SignInPage() {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        router.replace("/");
+        router.refresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Incorrect passcode.");
+      }
+    } catch {
+      setError("Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main
@@ -19,39 +44,49 @@ function SignInInner() {
         fontFamily: "system-ui, sans-serif",
       }}
     >
-      <div style={{ textAlign: "center", maxWidth: 360 }}>
+      <form onSubmit={submit} style={{ textAlign: "center", width: 320 }}>
         <h1 style={{ fontSize: 22, marginBottom: 8 }}>Analytics Copilot</h1>
         <p style={{ color: "#9aa3b2", marginBottom: 24, fontSize: 14 }}>
-          Agency-internal. Sign in with an approved Google account.
+          Agency-internal. Enter the team passcode to continue.
         </p>
-        <button
-          onClick={() => signIn("google", { callbackUrl: "/" })}
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Team passcode"
+          autoFocus
           style={{
-            background: "#3b82f6",
+            width: "100%",
+            boxSizing: "border-box",
+            background: "#161a22",
+            color: "#e6e9ef",
+            border: "1px solid #2a313d",
+            borderRadius: 8,
+            padding: "10px 14px",
+            fontSize: 15,
+            marginBottom: 12,
+          }}
+        />
+        <button
+          type="submit"
+          disabled={loading || !password}
+          style={{
+            width: "100%",
+            background: loading ? "#1e40af" : "#3b82f6",
             color: "white",
             border: "none",
             borderRadius: 8,
             padding: "10px 20px",
             fontSize: 15,
-            cursor: "pointer",
+            cursor: loading ? "default" : "pointer",
           }}
         >
-          Sign in with Google
+          {loading ? "Checking…" : "Enter"}
         </button>
-        {error === "AccessDenied" && (
-          <p style={{ color: "#f87171", marginTop: 16, fontSize: 13 }}>
-            That account isn&apos;t on the allowlist. Ask an admin to add it.
-          </p>
+        {error && (
+          <p style={{ color: "#f87171", marginTop: 16, fontSize: 13 }}>{error}</p>
         )}
-      </div>
+      </form>
     </main>
-  );
-}
-
-export default function SignInPage() {
-  return (
-    <Suspense>
-      <SignInInner />
-    </Suspense>
   );
 }
