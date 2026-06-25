@@ -78,6 +78,12 @@ export default function Chat() {
   const [exporting, setExporting] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  function fillInput(text: string) {
+    setInput(text);
+    inputRef.current?.focus();
+  }
 
   function exportName(ext: string) {
     const now = new Date();
@@ -230,7 +236,7 @@ export default function Chat() {
                 </div>
                 <div className="examples">
                   {group.prompts.map((ex) => (
-                    <button key={ex} onClick={() => send(ex)}>
+                    <button key={ex} onClick={() => fillInput(ex)}>
                       {ex}
                     </button>
                   ))}
@@ -302,6 +308,7 @@ export default function Chat() {
 
       <div className="composer">
         <textarea
+          ref={inputRef}
           rows={1}
           value={input}
           placeholder="Ask about a client's GA4 or Search Console data…"
