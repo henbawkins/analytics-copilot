@@ -13,6 +13,14 @@ import {
   queryGsc,
   type GscQueryArgs,
 } from "@/lib/connectors/gsc";
+import {
+  semrushDomainOverview,
+  semrushDomainOrganicKeywords,
+  semrushOrganicCompetitors,
+  semrushKeywordOverview,
+  semrushRelatedKeywords,
+  semrushBacklinksOverview,
+} from "@/lib/connectors/semrush";
 
 export const tools: Anthropic.Tool[] = [
   {
@@ -74,6 +82,97 @@ export const tools: Anthropic.Tool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "semrush_domain_overview",
+    description:
+      "Semrush domain overview: organic & paid keyword counts, estimated organic traffic, traffic cost, and Semrush rank for a domain. Use for a quick SEO health snapshot of a client (or a competitor). 'domain' is a bare hostname like 'example.com' (no https://). 'database' is a 2-letter market code, default 'us'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        domain: { type: "string", description: "Bare domain, e.g. example.com" },
+        database: { type: "string", description: "Market code, default 'us'" },
+      },
+      required: ["domain"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "semrush_domain_organic_keywords",
+    description:
+      "Semrush: the organic keywords a domain ranks for, sorted by estimated traffic. Returns keyword, position, previous position, search volume, CPC, keyword difficulty, competition, traffic %, and ranking URL. Use for keyword discovery, content-gap and ranking analysis for a client or competitor.",
+    input_schema: {
+      type: "object",
+      properties: {
+        domain: { type: "string", description: "Bare domain, e.g. example.com" },
+        database: { type: "string", description: "Market code, default 'us'" },
+        limit: { type: "integer", description: "Max keywords (default 50)" },
+      },
+      required: ["domain"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "semrush_organic_competitors",
+    description:
+      "Semrush: a domain's top organic search competitors, ranked by keyword overlap. Returns competitor domain, competition relevance, number of common keywords, organic keyword count, and organic traffic. Use to identify who a client competes with in organic search.",
+    input_schema: {
+      type: "object",
+      properties: {
+        domain: { type: "string", description: "Bare domain, e.g. example.com" },
+        database: { type: "string", description: "Market code, default 'us'" },
+        limit: { type: "integer", description: "Max competitors (default 20)" },
+      },
+      required: ["domain"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "semrush_keyword_overview",
+    description:
+      "Semrush: metrics for a single keyword — monthly search volume, CPC, competition, number of results, and keyword difficulty. Use to evaluate a target keyword's opportunity. 'database' default 'us'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        phrase: { type: "string", description: "The keyword/phrase" },
+        database: { type: "string", description: "Market code, default 'us'" },
+      },
+      required: ["phrase"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "semrush_related_keywords",
+    description:
+      "Semrush: related/semantically similar keyword ideas for a seed phrase, sorted by search volume. Returns keyword, volume, CPC, competition, difficulty, results. Use for keyword expansion and content ideation.",
+    input_schema: {
+      type: "object",
+      properties: {
+        phrase: { type: "string", description: "Seed keyword/phrase" },
+        database: { type: "string", description: "Market code, default 'us'" },
+        limit: { type: "integer", description: "Max ideas (default 50)" },
+      },
+      required: ["phrase"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "semrush_backlinks_overview",
+    description:
+      "Semrush: high-level backlink profile for a target — total backlinks, referring domains, authority score, trust score, followed vs nofollowed links. Use for off-page/authority assessment. 'target' is a domain or URL; 'targetType' is 'root_domain' (default), 'domain' (subdomain), or 'url'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        target: { type: "string", description: "Domain or URL" },
+        targetType: {
+          type: "string",
+          enum: ["root_domain", "domain", "url"],
+          description: "Default root_domain",
+        },
+      },
+      required: ["target"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 /** Execute a tool by name. Returns a JSON-serializable result for Claude. */
@@ -90,19 +189,62 @@ export async function dispatchTool(
       return listGscSites();
     case "query_gsc":
       return queryGsc(input as unknown as GscQueryArgs);
+    case "semrush_domain_overview":
+      return semrushDomainOverview(
+        input.domain as string,
+        input.database as string | undefined,
+      );
+    case "semrush_domain_organic_keywords":
+      return semrushDomainOrganicKeywords(
+        input.domain as string,
+        input.database as string | undefined,
+        input.limit as number | undefined,
+      );
+    case "semrush_organic_competitors":
+      return semrushOrganicCompetitors(
+        input.domain as string,
+        input.database as string | undefined,
+        input.limit as number | undefined,
+      );
+    case "semrush_keyword_overview":
+      return semrushKeywordOverview(
+        input.phrase as string,
+        input.database as string | undefined,
+      );
+    case "semrush_related_keywords":
+      return semrushRelatedKeywords(
+        input.phrase as string,
+        input.database as string | undefined,
+        input.limit as number | undefined,
+      );
+    case "semrush_backlinks_overview":
+      return semrushBacklinksOverview(
+        input.target as string,
+        input.targetType as "root_domain" | "domain" | "url" | undefined,
+      );
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
 }
 
-export const SYSTEM_PROMPT = `You are Analytics Copilot, an internal assistant for a marketing agency. You answer questions about clients' website performance using Google Analytics 4 (traffic, engagement, conversions) and Google Search Console (organic search clicks, impressions, rankings).
+export const SYSTEM_PROMPT = `You are Analytics Copilot, an internal assistant for a marketing agency's SEO team. You answer questions about clients' website performance using:
+- Google Analytics 4 (traffic, engagement, conversions)
+- Google Search Console (organic search clicks, impressions, average position for the client's OWN site)
+- Semrush (third-party SEO intelligence: domain authority/traffic estimates, the keywords any domain ranks for, keyword research/difficulty/volume, organic competitors, and backlink profiles — works for clients AND competitors)
 
-The agency manages ~70 client properties. A single Google service account has read access to all of them, exposed through your tools.
+The agency manages ~70 client properties. A single Google service account has read access to all GA4/GSC properties; a single Semrush key powers the Semrush tools. All are exposed through your tools.
+
+When to use which:
+- "How is my site doing / my traffic / my conversions" → GA4.
+- "What are we ranking for / clicks & impressions / our average position in Google" → GSC (the client's verified property; first-party Google data).
+- "Keyword volume/difficulty, what does <any domain> rank for, who are our SEO competitors, backlinks/authority, keyword ideas" → Semrush. Semrush works for ANY domain, so it's the tool for competitor analysis and keyword research where GSC (own-site only) can't help.
+- GSC vs Semrush for rankings: GSC = actual measured performance of the client's site; Semrush = estimated/third-party and available for competitors too.
 
 How to work:
-- When the user names a client/site, first call list_ga4_properties (and/or list_gsc_sites) to resolve the exact propertyId / siteUrl. Match on display name; if multiple plausibly match, ask the user which one.
+- When the user names a client/site, first call list_ga4_properties (and/or list_gsc_sites) to resolve the exact propertyId / siteUrl. Match on display name; if multiple plausibly match, ask the user which one. For Semrush you just need the bare domain (e.g. example.com) — no lookup needed.
+- Semrush 'database' defaults to 'us'; only change it for non-US markets. Semrush metrics are estimates; say so when relevant.
 - Pick sensible defaults: if no date range is given, use the last 28 days. Remember GSC data lags ~2-3 days.
-- Prefer querying exactly what's needed. Don't pull huge row counts when a small aggregate answers the question.
+- Prefer querying exactly what's needed. Don't pull huge row counts when a small aggregate answers the question. Semrush calls cost API credits, so request a sensible limit (e.g. 50 keywords) unless the user asks for more.
 - Today's date is provided in the user turn. Use it to resolve relative ranges.
 
 Presenting results:
