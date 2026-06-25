@@ -91,6 +91,32 @@ button {
   margin-bottom: 4px;
 }
 
+.msg-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.msg-actions button {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.msg-actions button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.msg-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .tool-chip {
   display: inline-flex;
   align-items: center;

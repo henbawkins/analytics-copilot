@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import MessageContent from "./MessageContent";
+import { exportExcel, exportPdf, extractTables, extractCharts } from "@/lib/export";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -64,7 +65,38 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [tools, setTools] = useState<string[]>([]);
+  const [exporting, setExporting] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  function exportName(ext: string) {
+    const now = new Date();
+    const stamp = now
+      .toISOString()
+      .slice(0, 16)
+      .replace("T", "-")
+      .replace(/:/g, "");
+    return `analytics-copilot-${stamp}.${ext}`;
+  }
+
+  async function handleExport(index: number, kind: "pdf" | "xlsx") {
+    const text = messages[index]?.content ?? "";
+    if (!text) return;
+    setExporting(`${index}:${kind}`);
+    try {
+      if (kind === "xlsx") {
+        await exportExcel(text, exportName("xlsx"));
+      } else {
+        const node = contentRefs.current.get(index);
+        if (node) await exportPdf(node, exportName("pdf"));
+      }
+    } catch (err) {
+      console.error("Export failed", err);
+      alert(`Export failed: ${(err as Error).message}`);
+    } finally {
+      setExporting(null);
+    }
+  }
 
   const scrollToBottom = () => {
     requestAnimationFrame(() => {
@@ -191,16 +223,54 @@ export default function Chat() {
           </div>
         )}
 
-        {messages.map((m, i) => (
-          <div key={i} className={`bubble ${m.role}`}>
-            {m.role === "assistant" && <div className="role">Copilot</div>}
-            {m.role === "assistant" ? (
-              <MessageContent text={m.content || (busy ? "…" : "")} />
-            ) : (
-              <div>{m.content}</div>
-            )}
-          </div>
-        ))}
+        {messages.map((m, i) => {
+          const isLast = i === messages.length - 1;
+          const streaming = busy && isLast && m.role === "assistant";
+          const canExport = m.role === "assistant" && !!m.content && !streaming;
+          const hasData =
+            canExport &&
+            (extractTables(m.content).length > 0 ||
+              extractCharts(m.content).length > 0);
+          return (
+            <div key={i} className={`bubble ${m.role}`}>
+              {m.role === "assistant" && <div className="role">Copilot</div>}
+              {m.role === "assistant" ? (
+                <>
+                  <div
+                    ref={(el) => {
+                      if (el) contentRefs.current.set(i, el);
+                      else contentRefs.current.delete(i);
+                    }}
+                  >
+                    <MessageContent text={m.content || (busy ? "…" : "")} />
+                  </div>
+                  {canExport && (
+                    <div className="msg-actions">
+                      <button
+                        onClick={() => handleExport(i, "pdf")}
+                        disabled={exporting !== null}
+                        title="Download this answer (text, tables, and charts) as a PDF"
+                      >
+                        {exporting === `${i}:pdf` ? "…" : "⬇ PDF"}
+                      </button>
+                      {hasData && (
+                        <button
+                          onClick={() => handleExport(i, "xlsx")}
+                          disabled={exporting !== null}
+                          title="Download the tables and chart data as an Excel workbook"
+                        >
+                          {exporting === `${i}:xlsx` ? "…" : "⬇ Excel"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div>{m.content}</div>
+              )}
+            </div>
+          );
+        })}
 
         {busy && tools.length > 0 && (
           <div className="bubble assistant">
