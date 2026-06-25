@@ -278,3 +278,122 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* Branded PDF report sheet (rendered off-screen, snapshotted to PDF) */
+.report-sheet {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  background: #ffffff;
+  color: #1a1d23;
+  font-family: Arial, Helvetica, sans-serif;
+  padding: 40px 44px;
+  box-sizing: border-box;
+}
+
+.report-header {
+  margin-bottom: 22px;
+}
+
+.report-headrow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.report-logo {
+  height: 34px;
+  width: auto;
+}
+
+.report-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1d23;
+}
+
+.report-query {
+  font-size: 13px;
+  color: #4b5563;
+  margin-top: 4px;
+  max-width: 70%;
+}
+
+.report-date {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.report-rule {
+  height: 3px;
+  background: #3e3cff;
+  border-radius: 2px;
+  margin-top: 16px;
+}
+
+.report-footer {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Light-theme overrides for the cloned answer content inside the report */
+.report-sheet .report-body {
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.report-sheet table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.report-sheet th,
+.report-sheet td {
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  text-align: left;
+  color: #1a1d23;
+}
+
+.report-sheet th {
+  background: #f3f4f6;
+  font-weight: 700;
+}
+
+.report-sheet code {
+  background: #f3f4f6;
+  color: #1a1d23;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.report-sheet .chart-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.report-sheet .chart-card .chart-title {
+  color: #374151;
+}
+
+.report-sheet .recharts-cartesian-grid line {
+  stroke: #e5e7eb;
+}
+
+.report-sheet .recharts-cartesian-axis-tick text,
+.report-sheet .recharts-label,
+.report-sheet .recharts-legend-item-text {
+  fill: #374151 !important;
+  color: #374151 !important;
+}
+
+.report-sheet .recharts-cartesian-axis line,
+.report-sheet .recharts-cartesian-axis-tick-line {
+  stroke: #9ca3af;
+}

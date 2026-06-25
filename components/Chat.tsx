@@ -8,6 +8,15 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 const EXAMPLE_GROUPS: { label: string; source: string; prompts: string[] }[] = [
   {
+    label: "Full reports",
+    source: "All sources",
+    prompts: [
+      "Full SEO snapshot for [client]",
+      "Complete monthly review for [client] — traffic, rankings, authority, competitors",
+      "Everything on [client] for the last 28 days, ready to export as a PDF",
+    ],
+  },
+  {
     label: "Traffic & engagement",
     source: "GA4",
     prompts: [
@@ -88,7 +97,11 @@ export default function Chat() {
         await exportExcel(text, exportName("xlsx"));
       } else {
         const node = contentRefs.current.get(index);
-        if (node) await exportPdf(node, exportName("pdf"));
+        if (node) {
+          // The user question that produced this answer (previous message).
+          const query = messages[index - 1]?.content;
+          await exportPdf(node, exportName("pdf"), { query });
+        }
       }
     } catch (err) {
       console.error("Export failed", err);

@@ -21,7 +21,9 @@ export type ChartSpec = {
   data: Array<Record<string, string | number>>;
 };
 
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#a855f7"];
+// Kaseya brand palette (from the corporate template): indigo, purple, cyan,
+// teal, sky. Used on both the dark chat UI and the light PDF report.
+const COLORS = ["#3e3cff", "#994ffa", "#34beef", "#09cea8", "#12a7e1"];
 
 /** Parse a fenced ```chart JSON block; returns null if invalid. */
 export function parseChartSpec(raw: string): ChartSpec | null {
